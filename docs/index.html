@@ -1,0 +1,845 @@
+<!--
+  VERSION DU QUESTIONNAIRE
+  ------------------------
+  Version 32
+  À CHAQUE MISE À JOUR :
+    - Mettre à jour le numéro dans <title>
+    - Mettre à jour la version affichée (haut, bas de page)
+    - Mettre à jour le paramètre version dans l’appel du module JS (?v=32)
+-->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Questionnaire DSM-5 (Voix) -v30 </title>
+  <style>
+    /* Responsive Design pour smartphone (max-width: 700px) */
+    /* Rend les questions, réponses et boutons adaptatifs */
+    @media (max-width: 700px) {
+      body { margin: 0.5em; }
+      #main, #questionnaire, #summary {
+        padding: 0.6em; max-width: 99vw; margin: 0.5em auto 0.5em auto;
+        border-radius: 0.8em; box-shadow: 0 2px 8px #0056cc22;
+      }
+      #question { font-size: 1em; padding: 0.3em 0.1em; }
+      textarea#inputResponse {
+        width: 99vw !important; max-width: 99vw !important; font-size: 1.13em; min-height: 2.4em;
+      }
+      button { width: 97vw; min-width: 120px; font-size: 1em; padding: 0.8em 0.2em; }
+    }
+    body { font-family: Arial, sans-serif; margin: 2em; background: #f9f9f9; }
+    #main, #questionnaire, #summary { background: #fff; padding: 2em; border-radius: 1em; box-shadow: 0 2px 10px #0056cc22; max-width: 650px; margin: 3em auto 2em; }
+    h1, h2 { color: #0056cc; font-weight: bold; }
+    #status { color: #c00; font-weight: bold; margin-bottom: 1em; }
+    #answersList { text-align: left; }
+    input[type="text"] { padding: 0.5em; font-size: 1.1em; border-radius: 5px; border: 1px solid #bbb; margin: 0.7em 1em 0.7em 0; width: 7em; }
+    button { background: #0056cc; color: #fff; border: none; border-radius: 1em; padding: 0.7em 1.7em; font-size: 1.1em; margin: 0.7em 0.7em 0 0; cursor: pointer; }
+    button:disabled { background: #aaa; }
+    #globalComment { width: 98%; min-height: 40px; font-size: 1.05em; padding: 0.5em; border-radius: 0.6em; border: 1px solid #bbb; margin-top: 0.7em; }
+    #vocalTip {
+      font-size:1.13em; margin:0.8em 0 1.2em 0; color:#b30000;
+      background: #fff8c2; border-left: 6px solid #ff9900;
+      padding: 0.6em 1em; font-weight: bold; display: block;
+    }
+  </style>
+</head>
+<body>
+  <div id="main">
+    <h1>Questionnaire DSM-5 (Voix)</h1>
+ <!-- Affichage de la version juste sous le titre -->
+    <div style="font-size:0.9em; color:#888; text-align:right; margin-bottom:1em;">
+      Version 32
+    </div>
+    <div style="margin:1.5em 0">
+
+ <button id="btnCommencer" style="font-size:1.22em;padding:0.9em 3em;">Commencer</button> 
+
+    </div>
+    <div id="intro" style="display:none;">
+      <div id="introText"></div>
+      <p>
+        <label for="codeInput"><b>Code à 4 chiffres :</b></label><br>
+        <input type="text" id="codeInput" maxlength="4" pattern="[0-9]{4}" autocomplete="off" />
+      </p>
+      <button id="startBtn">Démarrer le questionnaire</button>
+      <div id="status"></div>
+    </div>
+  </div>
+
+  <div id="questionnaire" style="display:none;">
+    <div id="partLabel" style="font-size:1.13em;color:#0056cc;margin-bottom:1em;"></div>
+    <div id="vocalTip"></div>
+    <p id="question"></p>
+  </div>
+
+  <div id="summary" style="display:none;">
+    <h2>Merci !</h2>
+    <p>Voici vos réponses :</p>
+    <ul id="answersList"></ul>
+    <label for="globalComment">Commentaire global (facultatif) :</label>
+    <textarea id="globalComment" placeholder="Vous pouvez ajouter un commentaire libre ici ..."></textarea>
+    <br>
+    <button id="copyBtn">Copier les réponses</button>
+    <button id="pdfBtn">Exporter en PDF</button>
+  </div>
+
+<script>
+// ---------------------------------
+// CHOISIR LE MODULE DE QUESTIONS ICI
+// ---------------------------------
+//
+let microActif = true; // ← ici, visible partout dans le script
+// ici COMMENCE le module de questions
+
+let questions = [
+  // ... toutes les questions ici
+
+// Section 1 
+  { section: 1, text: "Quel est votre âge?" },
+  { text: "Quel est votre sexe ?" },
+  { text: "Quel est votre profession ?" },
+
+  // Section 2 Antecedents medicaux
+  { section: 2, text: "Y a-t-il des antécédents médicaux connus ? Si oui, veuillez préciser." },
+  { text: "Des traitements <b>médicamenteux</b> sont-ils actuellement suivis ? Si oui, veuillez indiquer lesquels, y compris les médicaments sans ordonnance et les compléments alimentaires." },
+
+  // Section 3 Anxiété
+  { section: 3, text: "Ressentez-vous de la nervosité, de l’anxiété ou une tension excessive ?" },
+  { text: "Avez-vous tendance à vous inquiéter excessivement pour diverses choses, ou à ne pas pouvoir contrôler vos inquiétudes ?" },
+  { text: "Avez-vous des difficultés à vous concentrer, par exemple en lisant ou en regardant la télévision ?" },
+  { text: "Vous sentez-vous agité, avez-vous du mal à rester assis tranquillement ?" },
+  { text: "Observez-vous des troubles de l’appétit, tels qu’une perte ou une augmentation de l’appétit ?" },
+  { text: "Ressentez-vous un sentiment d’échec ou d’avoir déçu vous-même ou votre entourage ?" },
+
+  // Section 4 Depression
+  { section: 4, text: "Manquez-vous d’intérêt ou de plaisir à faire des choses qui vous plaisaient auparavant ?" },
+  { text: "Ressentez-vous une humeur dépressive, une tristesse ou un sentiment de désespoir ?" },
+  { text: "Vous sentez-vous fatigué ou avez-vous un manque d’énergie ?" },
+
+  // Section 5 TOC
+  { section: 5, text: "Répétez-vous certains gestes, comme vous laver les mains, compter, vérifier ou organiser des objets ? (Si non, passez à la section suivante)" },
+  { text: "Ces comportements sont-ils effectués en réponse à une pensée obsessionnelle ou une peur ?" },
+  { text: "Ces pensées ou comportements occupent-ils plus d’une heure par jour ou perturbent-ils significativement votre vie quotidienne ?" },
+
+  // Section 6 Irritabilité et colère
+  { section: 6, text: "Êtes-vous facilement irritable ou en colère ?" },
+  { text: "Estimez-vous que vos accès de colère sont disproportionnés par rapport à la situation ?" },
+
+  // Section 7 Maniaque/Hypomaniaque
+  { section: 7, text: "Traversez-vous des périodes où vous vous sentez particulièrement énergique, euphorique ou surexcité(e) ?" },
+  { text: "Lors de ces périodes, avez-vous tendance à entreprendre des activités qui pourraient avoir des conséquences négatives ?" },
+
+  // Section 8 Dissociation
+  { section: 8, text: "Vous arrive-t-il de vous sentir détaché de vous-même ou de votre environnement ?" },
+  { text: "Avez-vous déjà ressenti une impression d’irréalité à propos de votre environnement ?" },
+
+  // Section 9 Mémoire
+  { section: 9, text: "Rencontrez-vous des difficultés de mémoire, comme oublier des informations ou perdre le sens de l’orientation (par exemple, retrouver votre chemin) ?" },
+
+  // Section 10 Impact fonctionnel et soutien
+  { section: 10, text: "Dans quelle mesure ces difficultés ont-elles affecté votre capacité à travailler, à vous occuper de votre domicile ou à entretenir des relations avec autrui ?" },
+  { text: "À quel point estimez-vous que votre situation de vie actuelle et vos relations sociales vous apportent du soutien ?" },
+
+  // Section 11 Substances
+  { section: 11, text: "Utilisez-vous du tabac, de l’alcool, des drogues ou de la caféine ? Si oui, veuillez indiquer la fréquence et la quantité." },
+
+  // Section 12 Santé physique/douleurs
+  { section: 12, text: "Ressentez-vous des douleurs chroniques ou un inconfort physique ? Si oui, merci de préciser." },
+  { text: "Y a-t-il d’autres symptômes physiques que vous avez remarqués et qui vous préoccupent ?" },
+  { text: "Comment évalueriez-vous votre état de santé physique global (mauvais, passable, bon, très bon, excellent) ?" },
+
+  // Section 13 Suicidaire
+  { section: 13, text: "Avez-vous eu des pensées selon lesquelles il vaudrait mieux être mort ou vous blesser d’une quelconque manière ?" },
+
+  // Section 14 Sommeil
+  { section: 14, text: "Comment évalueriez-vous la qualité générale de votre sommeil ?" },
+  { text: "Éprouvez-vous des difficultés à vous endormir ou à rester endormi durant la nuit ?" },
+  { text: "Vous réveillez-vous le matin en vous sentant reposé ou encore fatigué ?" },
+  { text: "Avez-vous des troubles du sommeil, tels que des cauchemars, du somnambulisme ou des réveils fréquents ?" },
+  { text: "Utilisez-vous des médicaments ou des substances pour faciliter le sommeil ?" },
+  { text: "Des changements de mode de vie ou des événements récents ont-ils modifié votre rythme de sommeil ?" },
+
+  // Section 15 Activité physique
+  { section: 15, text: "À quelle fréquence pratiquez-vous une activité physique ou de l’exercice ?" },
+
+  // Section 16 Antecedents psychiatriques
+  { section: 16, text: "Un diagnostic de trouble psychique a-t-il déjà été posé auparavant ?" },
+  { text: "Un traitement pour des difficultés psychiques a-t-il déjà été suivi (thérapie, conseil, médication) ? Si oui, merci de préciser." },
+
+   // Section 17 Psychose
+  { section: 17, text: "Avez-vous perçu des voix que les autres ne semblent pas entendre ?" },
+  { text: "Avez-vous eu des croyances ou des idées que d’autres personnes considèrent comme étranges ou inhabituelles ?" },
+
+  // Section 18 Alimentaire
+  { section: 18, text: "Vous arrive-t-il de vous inquiéter de façon excessive pour votre poids ou votre apparence corporelle ?" },
+  { text: "Avez-vous eu des épisodes de restriction alimentaire importante, de vomissements volontaires, ou de prises alimentaires excessives et incontrôlables ?" },
+
+  // Section 19 Sexuel
+  { section: 19, text: "Avez-vous constaté une baisse notable de votre intérêt ou de votre satisfaction concernant votre sexualité ?" },
+
+  // Section 20 PTSD
+  { section: 20, text: "Avez-vous été exposé à un événement traumatique qui continue à vous perturber (cauchemars, flashbacks, évitement) ?" },
+  { text: "Présentez-vous des réactions de stress importantes en lien avec des souvenirs douloureux ?" },
+
+  // Section 21 Hyperativité/attention
+  { section: 21, text: "Rencontrez-vous souvent des difficultés à rester concentré, à terminer ce que vous commencez, ou à rester en place ?" },
+  { text: "Êtes-vous fréquemment distrait ou ressentez-vous une agitation intérieure ou physique inhabituelle ?" },
+
+  // Section 22 Maltraitance
+  { section: 22, text: "Avez-vous été exposé à des situations de violence ou de maltraitance ? Si oui, souhaitez-vous en parler ?" },
+
+  // Section 23 Objectifs de la consultatation
+  { section: 23, text: "Y a-t-il un sujet spécifique que vous souhaitez aborder lors de la consultation ?" },
+  { text: "Quels sont vos objectifs ou attentes en consultant actuellement ?" }
+
+// --- fin des questions
+];
+
+// ici FINIT le module des questions
+
+// ---------------------------------
+// FIN CHOIX DU MODULE
+// ---------------------------------
+
+let responses = [];
+let current = 0, codePerso = "", autoNextTimeout = null, frenchVoice = null, consigneVocaleDejaLue = false;
+let correctionResumeMode = false; // Pour correction depuis le résumé
+let delaiRecoRelance = 5000; // (en ms) Délai entre deux relances micro
+
+const mainDiv = document.getElementById("main");
+const introText = document.getElementById("introText");
+const codeInput = document.getElementById("codeInput");
+const startBtn = document.getElementById("startBtn");
+const questionnaireDiv = document.getElementById("questionnaire");
+const partLabel = document.getElementById("partLabel");
+const questionEl = document.getElementById("question");
+const summaryDiv = document.getElementById("summary");
+const answersList = document.getElementById("answersList");
+const copyBtn = document.getElementById("copyBtn");
+const pdfBtn = document.getElementById("pdfBtn");
+const commentGlobal = document.getElementById("globalComment");
+const vocalTip = document.getElementById("vocalTip");
+const statusDiv = document.getElementById("status");
+
+// voici les questions à réponses qualitatives et quantitatives (min 1- 5 max)
+const notables = [
+  5, 6, 7, 8, 9, 10,
+  11, 12, 13,
+  14, 15, 16,
+  17, 18,
+  19, 20,
+  21, 22,
+  23,
+  24, 25,
+  27, 28,
+  29,
+  30, 31, 32, 33, 34, 35,
+  36,
+  37, 38,
+  39, 40,
+  41, 42,
+  43,
+  44, 45,
+  46, 47,
+  48,
+  49, 50
+];
+
+// --- Synthèse vocale ---
+window.speechSynthesis.onvoiceschanged = function() {
+  const voices = window.speechSynthesis.getVoices();
+  frenchVoice = voices.find(v => v.lang.startsWith("fr"));
+};
+// Fonction synthèse vocale
+function speak(txt, cb) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+
+  // Nettoyage du HTML pour éviter que les balises comme <b> soient lues
+  const tmp = document.createElement("div");
+  tmp.innerHTML = txt;
+  const cleanText = tmp.textContent || tmp.innerText || "";
+
+  const utter = new SpeechSynthesisUtterance(cleanText);
+
+  utter.lang = "fr-FR";
+  if (frenchVoice) utter.voice = frenchVoice;
+  if (typeof cb === "function") utter.onend = cb;
+  window.speechSynthesis.speak(utter);
+}
+
+// --------------------
+// Fonction de vérification support navigateur
+// --------------------
+function checkSpeechRecognitionSupport() {
+  return ('webkitSpeechRecognition' in window) || ('SpeechRecognition' in window);
+}
+
+// --------------------
+// Instance unique de reconnaissance vocale pour toute la session
+// --------------------
+let recognition = null;
+
+if (('webkitSpeechRecognition' in window) || ('SpeechRecognition' in window)) {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  recognition.lang = "fr-FR";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+}
+
+// --------------------
+// Fonction qui démarre la reconnaissance et utilise toujours la même instance
+// --------------------
+function startRecognition(callback) {
+  if (!recognition) {
+    alert("Reconnaissance vocale non supportée");
+    callback("");
+    return;
+  }
+
+  // Important : on enlève les anciens ecouteurs d'evenements pour éviter les doublons
+  recognition.onresult = null;
+  recognition.onerror = null;
+  recognition.onend = null;
+
+  recognition.onresult = function(event) {
+    const transcript = event.results[0][0].transcript.trim();
+    callback(transcript);
+  };
+  recognition.onerror = function(event) {
+    callback(""); // Pour relancer ou corriger
+  };
+  recognition.onend = function() {
+    // Rien à faire ici, sauf si tu veux relancer la reco auto
+  };
+  recognition.start();
+}
+
+// ---------------------------------
+// CHARGEMENT DYNAMIQUE DU MODULE DE QUESTIONS
+// ---------------------------------
+document.getElementById('btnCommencer').onclick = function() {
+  let fichier = document.getElementById("moduleSelect").value;
+  // Supprimer un ancien module si déjà chargé
+  let oldScript = document.getElementById("dynamicModule");
+  if (oldScript) oldScript.remove();
+
+  // Charger le nouveau module (questions.js, etc.)
+  let script = document.createElement('script');
+// version du fichier, ici version 32
+  script.src = fichier+"?v=32";
+  script.id = "dynamicModule";
+  script.onload = function() {
+    // Lancer le questionnaire après le chargement du module
+    if (typeof questions !== "undefined" && questions.length > 0) {
+      // Démarrage classique du quiz (intro ou direct)
+      mainDiv.style.display = "none";
+      questionnaireDiv.style.display = "block";
+      askQuestion(0);
+    } else {
+      alert("Le module de questions n'a pas pu être chargé.");
+    }
+  };
+  document.body.appendChild(script);
+};
+
+// ---------------------------------
+// (fonction askQuestion commence ici…)
+// ---------------------------------
+
+
+// -----------------------------------------------------------------
+// Affichage d'une question (zone réponse, boutons, micro, dynamique)
+// -----------------------------------------------------------------
+function askQuestion(idx) {
+// assigne la question actuelle
+let q = questions[idx];
+  let texte = q.text;
+// ajout automatique de la consigne pour les questions notables
+  if (notables.includes(idx)) {
+texte += `<br><span style="color: #666; font-size: 0.9em; font-style: italic;">Décrivez, et notez de 1 (non) à 5 (max).</span>`;
+  }
+// Affiche le numero de question + le texte enrichi
+questionEl.innerHTML = `${idx + 1}/${questions.length} – ${texte}`;
+
+// Optionnel: affichage du label de section- desactivé ici
+// if (q.section && (idx === 0 || q.section !== questions[idx - 1].section)) {
+//   partLabel.textContent = "Section " + q.section;
+// } else {
+  partLabel.textContent = "";
+//)
+// fin de la fonction assigner
+
+// prepare l'accumulation du texte pour la reconnaissance voclae
+  let transcriptAccumule = "";
+
+  // Affiche le numéro de section UNIQUEMENT si nouvelle section (pas de nom de section)
+  if (
+    typeof questions[idx].section === "number" &&
+    (idx === 0 || questions[idx].section !== questions[idx - 1].section)
+  ) {
+    partLabel.textContent = "Section " + questions[idx].section;
+  } else {
+    partLabel.textContent = "";
+  }
+
+  // Affiche TOUJOURS le numéro de la question (ex : 7/52 – ...)
+  //questionEl.innerHTML = `${idx + 1}/${questions.length} – ${questions[idx].text}`;
+
+  // Conseils et instructions à afficher à chaque question
+  vocalTip.style.display = "block";
+ vocalTip.innerHTML = '<b>Au clavier :</b> Terminez votre réponse par la touche <span style="color:#0056cc;font-weight:bold;">RETOUR</span>.<br>' +
+  '<b>En vocal :</b> Terminez en disant "<span style="color:#0056cc;font-weight:bold;">STOP</span>".';
+
+  // ----------------------------------------------------------------
+  // Création dynamique de la zone de réponse (textarea + boutons + micro)
+  // ----------------------------------------------------------------
+  let oldZone = document.getElementById("zoneResponse");
+  if (oldZone) oldZone.remove();
+  let responseZone = document.createElement("div");
+  responseZone.id = "zoneResponse";
+  responseZone.style.marginTop = "1.3em";
+
+  // Création du champ de réponse (textarea responsive)
+  input = document.createElement("textarea");
+  input.id = "inputResponse";
+  input.style.padding = "0.5em";
+  input.style.fontSize = "1.2em";
+  input.style.minHeight = "3em";
+  input.style.resize = "vertical";
+  input.placeholder = "Répondez ici ou utilisez le micro...";
+  // Responsive largeur mobile/desktop
+  input.style.width = "100%";
+  input.style.maxWidth = "100vw";
+  // Agrandit automatiquement le textarea selon la saisie
+  input.addEventListener('input', function() {
+    this.style.height = "auto";
+    this.style.height = (this.scrollHeight) + "px";
+  });
+  // Restaure la réponse déjà saisie si existante
+  if (responses[idx]) input.value = responses[idx];
+  responseZone.appendChild(input);
+
+  // ----------------------------------------------------------------
+  
+// Création de la zone de correction/validation (Corriger, Pause, Valider)
+// ----------------------------------------------------------------
+let correctionZone = document.createElement("div");
+correctionZone.style.marginTop = "0.7em";
+responseZone.appendChild(correctionZone);
+
+// Bouton "Corriger"
+let btnCorriger = document.createElement("button");
+btnCorriger.textContent = "Corriger";
+btnCorriger.style.background = "#fb8c00";
+btnCorriger.style.color = "#fff";
+btnCorriger.style.marginRight = "1em";
+btnCorriger.onclick = function() {
+  input.value = "";
+  input.focus();
+};
+correctionZone.appendChild(btnCorriger);
+
+// Bouton "Pause"
+let btnPause = document.createElement("button");
+btnPause.textContent = "Pause";
+btnPause.style.background = "#9486db";
+btnPause.style.color = "#fff";
+btnPause.style.marginRight = "1em";
+btnPause.onclick = function() {
+  alert("Pause activée !");
+};
+correctionZone.appendChild(btnPause);
+
+// Bouton "Valider"
+let btnValider = document.createElement("button");
+btnValider.textContent = "Valider";
+btnValider.style.background = "#20b05a";
+btnValider.style.color = "#fff";
+btnValider.style.marginRight = "1em";
+btnValider.onclick = function() {
+  responses[idx] = input.value.trim();
+  correctionZone.innerHTML = ""; // Vide la zone des boutons
+  afficherPauseEtCorriger(input.value.trim());
+};
+correctionZone.appendChild(btnValider);
+
+  // ----------------------------------------------------------------
+  // Validation clavier (Entrée)
+  // Entrée : valide et affiche Pause/Corriger dynamiquement
+  // Shift+Entrée : retour à la ligne
+  // ----------------------------------------------------------------
+  input.addEventListener("keydown", function(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      responses[idx] = input.value.trim();
+      correctionZone.innerHTML = "";
+      afficherPauseEtCorriger(input.value.trim());
+    }
+  });
+
+  // -----------------------------------------------------------------
+  // Ajout du bouton micro EN BAS de la zone réponse (jamais caché sur mobile)
+  // -----------------------------------------------------------------
+  let btnVocal = document.createElement("button");
+  btnVocal.type = "button";
+
+// Fonction de mise à jour dynamique du texte selon l'état du micro
+function majTexteBtnMicro() {
+ if (!checkSpeechRecognitionSupport()) {
+    // Cas navigateur non supporté
+    btnVocal.innerHTML =
+      '<span style="color:#b30000;">Micro non supporté par ce navigateur 😕</span>';
+    btnVocal.disabled = true;
+
+  } else if (!microActif) {
+    // Micro désactivé volontairement (clavier uniquement)
+    btnVocal.innerHTML =
+      '<span>🔇 Micro fermé, clavier seulement</span>' +
+      '<span style="font-size:0.97em;color:#1976d2;margin-top:2px;">Cliquez pour activer le micro</span>';
+    btnVocal.disabled = false;
+
+  } else if (
+    typeof recognition !== "undefined" &&
+    recognition &&
+    recognition.state === "inactive" // certains navigateurs supportent .state
+  ) {
+    // Micro inactif selon l’API (cas rare mais géré)
+    btnVocal.innerHTML =
+      '<span>🎤 Réponse orale</span>' +
+      '<span style="font-size:0.97em;color:#b30000;margin-top:2px;">Micro désactivé ? Cliquez pour activer</span>';
+    btnVocal.disabled = false;
+
+  } else {
+    // Cas général : micro actif, prêt à écouter
+    btnVocal.innerHTML =
+      '<span>🎤 Réponse orale</span>' +
+      '<span style="font-size:0.97em;color:#b30000;margin-top:2px;">Cliquez ici pour répondre par la voix</span>';
+    btnVocal.disabled = false;
+  }
+}
+
+majTexteBtnMicro();
+
+btnVocal.id = "btnVocal";
+btnVocal.style.display = "flex";
+btnVocal.style.flexDirection = "column";
+btnVocal.style.alignItems = "center";
+btnVocal.style.marginTop = "1.5em";
+btnVocal.style.marginLeft = "1em";
+btnVocal.style.lineHeight = "1.3";
+responseZone.appendChild(btnVocal);
+
+
+  // ----------------------------------------------------------------
+  // Insertion de la zone de réponse dans le DOM et focus
+  // ----------------------------------------------------------------
+  questionEl.parentNode.appendChild(responseZone);
+  input.focus();
+
+  // ----------------------------------------------------------------
+  // Relance la reconnaissance vocale au clic sur le bouton micro
+  // ----------------------------------------------------------------
+ btnVocal.onclick = function() {
+  // Si le micro est supporté
+if (checkSpeechRecognitionSupport()) {
+    microActif = !microActif;
+    majTexteBtnMicro();
+    correctionZone.innerHTML = "<i>" + (microActif
+      ? "Micro activé : vous pouvez répondre à l'oral."
+      : "Micro désactivé : saisie au clavier uniquement.") + "</i>";
+
+    // Si le micro vient d'être activé, on relance la reco immédiatement
+    if (microActif) {
+      autoRecognition(0);
+     } else {
+      input.focus(); // <-- Place le curseur dans le champ de réponse
+    }
+  }
+};
+
+// ----------------------------------------------------------------
+// Fonction pour lancer la reco vocale uniquement si microActif
+// ----------------------------------------------------------------
+function lancerRecoSiActif() {
+  if (microActif) autoRecognition(0);
+}
+
+// ----------------------------------------------------------------
+// Lance la consigne vocale une seule fois au début
+// ----------------------------------------------------------------
+if (!consigneVocaleDejaLue) {
+  consigneVocaleDejaLue = true;
+  speak("Pour valider, terminez chaque réponse en disant stop.", function() {
+    speak(stripHTML(questions[idx].text), lancerRecoSiActif);
+  });
+} else {
+  speak(stripHTML(questions[idx].text), lancerRecoSiActif);
+}
+  // ----------------------------------------------------------------
+  // Fonction de reconnaissance vocale automatique, avec relances
+  // ----------------------------------------------------------------
+  function autoRecognition(relanceCount = 0) {
+    // ajuste le nombre de relances - en general 10 mais maintenant 20, peut être plus !
+    const maxRelances = 20;
+    btnVocal.disabled = true;
+    startRecognition(function(rep) {
+      btnVocal.disabled = false;
+      if (rep && rep.trim()) {
+        transcriptAccumule += " " + rep.trim();
+
+        // rep détecte-t-on un mot de fin ? (stop, terminé, fin)
+        let endsWithMotCle = transcriptAccumule.match(/\b(stop|terminé|fin)\b[\s.?!]*$/i);
+        let cleanRep = transcriptAccumule.replace(/\b(stop|terminé|fin)\b[\s.?!]*$/i, '').trim();
+
+        if (endsWithMotCle) {
+          // Si réponse vide après mot-clé, on valide quand même
+          input.value = cleanRep;
+          responses[idx] = cleanRep;
+          correctionZone.innerHTML = "";
+          afficherPauseEtCorriger(cleanRep);
+        } else if (relanceCount < maxRelances) {
+          // On attend que l'utilisateur dise le mot de fin
+          input.value = transcriptAccumule + " ...";
+          afficherZoneValiderOuAttente("En attente de la fin de votre réponse (dites \"stop\")...");
+          setTimeout(() => autoRecognition(relanceCount + 1), delaiRecoRelance);
+        } else {
+          // Après trop de relances, invite à valider ou recommencer
+          afficherZoneValiderOuAttente("Aucun mot de fin détecté après plusieurs tentatives. Vous pouvez valider ou recommencer.");
+        }
+      } else {
+        if (relanceCount < maxRelances) {
+          // Pas de son reconnu, relance la reco
+          afficherZoneValiderOuAttente("Je n'ai rien entendu. Répondez à nouveau ou validez si tout est correct.");
+          setTimeout(() => autoRecognition(relanceCount + 1), delaiRecoRelance);
+        } else {
+          // Après trop de tentatives sans réponse, invite à valider ou réessayer
+          afficherZoneValiderOuAttente("Aucune réponse détectée après plusieurs tentatives. Vous pouvez valider ou réessayer.");
+        }
+      }
+    });
+
+    // ------------------------------------------------------------
+    // Affiche les boutons de validation et de correction lors des relances
+    // ------------------------------------------------------------
+    function afficherZoneValiderOuAttente(message) {
+      correctionZone.innerHTML = `
+        <button id="btnValiderManuel" style="background:#20b05a;">Valider</button>
+        <button id="btnCorrigerReco" style="background:#fb8c00;margin-left:1em;">Corriger</button>
+        <div style="margin-top:0.5em;color:#b30000;">${message}</div>
+      `;
+      // Validation manuelle par clic sur "Valider"
+      document.getElementById("btnValiderManuel").onclick = function() {
+        responses[idx] = input.value.trim();
+        correctionZone.innerHTML = "";
+        transcriptAccumule = "";
+        afficherPauseEtCorriger(input.value.trim());
+      };
+      // Correction manuelle par clic sur "Corriger"
+      document.getElementById("btnCorrigerReco").onclick = function() {
+        input.value = "";
+        transcriptAccumule = "";
+        correctionZone.innerHTML = "";
+        setTimeout(() => autoRecognition(0), 400);
+      };
+    }
+  }
+
+  // ----------------------------------------------------------------
+  // Fonction qui affiche les boutons PAUSE/REPRENDRE et CORRIGER,
+  // et gère le passage automatique à la question suivante
+  // ----------------------------------------------------------------
+  function afficherPauseEtCorriger(currentRep) {
+    // Calcul du délai dynamique selon la longueur de la réponse
+    let cleanLength = currentRep.length;
+    let minDelay = 1200;
+    let maxDelay = 9000;
+    let msParCaractere = 40;
+    let delay = Math.min(maxDelay, minDelay + cleanLength * msParCaractere);
+
+    // Ajout du bouton Corriger
+    let btnRetry = document.createElement("button");
+    btnRetry.textContent = "Corriger";
+    btnRetry.style.background = "#fb8c00";
+    btnRetry.style.marginLeft = "1em";
+    correctionZone.appendChild(btnRetry);
+
+    // Ajout du bouton PAUSE/REPRENDRE
+    let btnPause = document.createElement("button");
+    btnPause.textContent = "Pause";
+    btnPause.style.background = "#7a7adb";
+    btnPause.style.marginLeft = "1em";
+    correctionZone.appendChild(btnPause);
+
+    // Gestion du timer et du bouton Pause/Reprendre
+    let timerPaused = false;
+    let remainingTime = delay;
+    let timerStart = Date.now();
+    let passageAuto;
+    let input; //rend la variable globale
+    function startTimer() {
+    let input = document.getElementById("inputResponse"); // ⬅️ obligatoire
+      passageAuto = setTimeout(function() {
+     //Verification pour les questions notables avant de passer à la question suivante
+     if (notables.includes(current)) {
+     let reponse=input.value.trim();   
+     let match = reponse.match(/([1-5])\s*$/);//note entre 1 et 5 a la fin de la reponse
+        if (!match) {
+          correctionZone.innerHTML = `
+            <div style="color:#b30000;margin-top:0.8em;">
+              Merci d'ajouter une note entre 1 (NON) et 5 (max) à la fin de votre réponse.
+            </div>
+            <button id="btnCorrigerNote" style="background:#fb8c00;margin-top:1em;">Corriger la note</button>
+          `;
+          document.getElementById("btnCorrigerNote").onclick = function() {
+            input.focus();
+            input.setSelectionRange(input.value.length, input.value.length);
+          };
+          return; // ⛔ stop ici Ne pas passer à la question suivante
+        }
+      }
+//si reponse OK continuer normalement
+        transcriptAccumule = "";
+        if (correctionResumeMode) {
+          correctionResumeMode = false;
+          showSummary();
+        } else {
+          nextQuestionOrSummary();
+        }
+      }, remainingTime);
+      timerStart = Date.now();
+    }
+
+    function pauseTimer() {
+      clearTimeout(passageAuto);
+      remainingTime -= (Date.now() - timerStart);
+      timerPaused = true;
+      btnPause.textContent = "Reprendre";
+    }
+
+    function resumeTimer() {
+      timerPaused = false;
+      btnPause.textContent = "Pause";
+      startTimer();
+    }
+
+    btnPause.onclick = function() {
+      if (!timerPaused) {
+        pauseTimer();
+      } else {
+        resumeTimer();
+      }
+    };
+
+    startTimer();
+
+    // Si on clique "Corriger", on annule le passage auto et on relance la reco ou réaffiche la zone clavier
+    btnRetry.onclick = function() {
+      clearTimeout(passageAuto);
+      input.value = "";
+      transcriptAccumule = "";
+      correctionZone.innerHTML = "";
+      setTimeout(() => autoRecognition(0), 400);
+    };
+  }
+}
+
+// Fonction utilitaire pour nettoyer le HTML pour la synthèse vocale 
+// (retire toute balise, ne garde que le texte brut)
+function stripHTML(html) {
+  let div = document.createElement("div");
+  div.innerHTML = html;
+  return div.textContent || div.innerText || "";
+}
+
+//-----------------
+// Fonction de gestion du passage à la question suivante
+// (ou affichage du résumé à la fin du questionnaire)
+// ---------------------------------------------------------
+function nextQuestionOrSummary() {
+  if (++current < questions.length) askQuestion(current);
+  else showSummary();
+}
+
+function showSummary() {
+  questionnaireDiv.style.display = "none";
+  summaryDiv.style.display = "block";
+  answersList.innerHTML = "";
+  questions.forEach((q, i) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<b>Section ${q.section || ""}</b> — ${q.text} : <span id="rep${i}">${responses[i] ? responses[i] : "<em>(Aucune réponse)</em>"}</span> `;
+    let btnCorriger = document.createElement("button");
+    btnCorriger.textContent = "Corriger";
+    btnCorriger.style.marginLeft = "1em";
+    btnCorriger.onclick = function() {
+      summaryDiv.style.display = "none";
+      questionnaireDiv.style.display = "block";
+      current = i;
+      correctionResumeMode = true;
+      askQuestion(i);
+    };
+    li.appendChild(btnCorriger);
+    answersList.appendChild(li);
+  });
+}
+
+window.onload = function() {
+  document.getElementById('btnCommencer').onclick = function() {
+    document.getElementById('btnCommencer').style.display = 'none';
+
+// Affichage de l'intro avec innerHTML
+introText.innerHTML = `<p>Je vais vous poser une liste de 52 questions se rapportant à ces dernières semaines.</p>
+<p>Ces questions sont réparties en 23 sections.</p>
+<p>Vous pouvez répondre en tapant sur le clavier ou si votre appareil le permet, en répondant vocalement</p>
+<p>Parlez lentement et distinctement si vous utilisez le micro, mais terminez toujours en disant <b>"STOP"</b> quand vous avez fini. Vous pouvez aussi faire une pause ou ajouter un commentaire.</p>
+<p>Si votre appareil demande "ce site veut utiliser le micro", répondez <b>autoriser</b>.</p>
+<p>En cas d’erreur, vous pouvez utiliser le micro ou saisir votre réponse au clavier.</p>
+<p>À la fin, un commentaire global est possible et vous pourrez corriger, copier vos réponses ou les enregistrer en PDF grâce aux boutons prévus à cet effet.</p>
+<p><b>Entrez maintenant un code à 4 chiffres de votre choix en les tapant sur le clavier.</b></p>`;
+
+    document.getElementById('intro').style.display = "block";
+    setTimeout(function() {
+      speak("Je vais vous poser une liste de 52 questions se rapportant à ces dernières semaines. Ces questions sont réparties en 23 sections. Vous pouvez répondre en tapant sur le clavier ou, si votre appareil le permet,  en répondant vocalement. Parles lentement et distinctement si vous utilisez le micro mais terminez toujours en disant, STOP, quand vous avez fini. Vous pouvez aussi faire une pause ou ajouter un commentaire. Si votre appareil demande 'ce site veut utiliser le micro, répondez autoriser'. En cas d’erreur, vous pouvez utiliser le micro ou saisir votre réponse au clavier. À la fin, un commentaire global est possible et vous pourrez corriger, copier vos réponses ou les enregistrer en PDF grâce aux boutons prévus à cet effet. Entrez maintenant un code à 4 chiffres de votre choix en les tapant sur le clavier.", function() {
+        codeInput.focus();
+      });
+    }, 300);
+  };
+  startBtn.onclick = function() {
+    const code = codeInput.value.trim();
+    if (!/^\d{4}$/.test(code)) {
+      statusDiv.textContent = "Veuillez entrer un code à 4 chiffres.";
+      return;
+    }
+    codePerso = code;
+    mainDiv.style.display = "none";
+    questionnaireDiv.style.display = "block";
+    current = 0;
+    responses = [];
+    askQuestion(current);
+  };
+  // Permettre Entrée pour démarrer après le code
+  codeInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+      startBtn.click();
+    }
+  });
+// Toutes les reponses du questionnaire copiées dans le presse-papier (pour coller dans un  mail)
+  copyBtn.onclick = function() {
+    const txt = "Code : " + codePerso + "\n"
+      + questions.map((q, i) => "Section " + (q.section||"") + " — " + q.text + " : " + (responses[i] || "(Aucune réponse)")).join("\n")
+      + "\nCommentaire global : " + commentGlobal.value;
+    navigator.clipboard.writeText(txt);
+    alert("Réponses copiées !");
+  };
+// impression PDF de la page entiere (y compris le resumé)
+  pdfBtn.onclick = function() { window.print(); };
+};
+</script>
+<! ---Affichage discret de la version en bas de page ---> 
+<footer style="text-align:center; font-size:0.85em; color:#aaa; margin-top:2em;">
+  Version 32 – &copy; 2024 SwedSleep
+</footer>
+</body>
+</html>
