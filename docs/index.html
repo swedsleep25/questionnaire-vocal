@@ -321,7 +321,15 @@ function startRecognition(callback) {
 // CHARGEMENT DYNAMIQUE DU MODULE DE QUESTIONS
 // ---------------------------------
 document.getElementById('btnCommencer').onclick = function() {
-  let fichier = document.getElementById("moduleSelect").value;
+let select = document.getElementById("moduleSelect");
+let fichier = select ? select.value : null;
+
+if (!fichier || fichier.trim() === "") {
+  alert("Aucun module sélectionné. Merci de choisir un module dans la liste.");
+  return;
+}
+
+  
   // Supprimer un ancien module si déjà chargé
   let oldScript = document.getElementById("dynamicModule");
   if (oldScript) oldScript.remove();
